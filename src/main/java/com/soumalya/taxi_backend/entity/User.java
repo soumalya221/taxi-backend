@@ -1,9 +1,8 @@
 package com.soumalya.taxi_backend.entity;
 
+import com.soumalya.taxi_backend.entity.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -12,11 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class User extends BaseEntity {
 
     @Column(nullable = false)
     private String name;
@@ -33,6 +28,4 @@ public class User {
     @Column(nullable = false)
     private String role;
 
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
 }

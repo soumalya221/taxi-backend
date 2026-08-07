@@ -1,9 +1,9 @@
 package com.soumalya.taxi_backend.controller;
 
-import com.soumalya.taxi_backend.dto.LoginRequest;
-import com.soumalya.taxi_backend.dto.LoginResponse;
-import com.soumalya.taxi_backend.dto.RegisterRequest;
-import com.soumalya.taxi_backend.dto.RegisterResponse;
+import com.soumalya.taxi_backend.dto.request.LoginRequest;
+import com.soumalya.taxi_backend.dto.request.RegisterRequest;
+import com.soumalya.taxi_backend.dto.response.LoginResponse;
+import com.soumalya.taxi_backend.dto.response.RegisterResponse;
 import com.soumalya.taxi_backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
