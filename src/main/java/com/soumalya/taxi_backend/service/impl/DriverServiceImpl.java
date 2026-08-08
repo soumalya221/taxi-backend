@@ -1,5 +1,6 @@
 package com.soumalya.taxi_backend.service.impl;
 
+import com.soumalya.taxi_backend.dto.request.DriverLocationRequest;
 import com.soumalya.taxi_backend.dto.request.DriverRegisterRequest;
 import com.soumalya.taxi_backend.dto.response.DriverResponse;
 import com.soumalya.taxi_backend.entity.Driver;
@@ -57,6 +58,32 @@ public class DriverServiceImpl implements DriverService {
                 .experience(savedDriver.getExperience())
                 .rating(savedDriver.getRating())
                 .status(savedDriver.getStatus().name())
+                .build();
+    }
+
+    @Override
+    public DriverResponse updateLocation(String email,
+                                         DriverLocationRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Driver driver = driverRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Driver profile not found"));
+
+        driver.setCurrentLatitude(request.getLatitude());
+        driver.setCurrentLongitude(request.getLongitude());
+
+        Driver updatedDriver = driverRepository.save(driver);
+
+        return DriverResponse.builder()
+                .id(updatedDriver.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .licenseNumber(updatedDriver.getLicenseNumber())
+                .experience(updatedDriver.getExperience())
+                .rating(updatedDriver.getRating())
+                .status(updatedDriver.getStatus().name())
                 .build();
     }
 }
