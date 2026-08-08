@@ -62,6 +62,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(DriverAlreadyExistsException.class)
+    public ResponseEntity<String> handleDriverExists(DriverAlreadyExistsException ex) {
+
+        return ResponseEntity
+                .badRequest()
+                .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(LicenseAlreadyExistsException.class)
+    public ResponseEntity<String> handleLicenseExists(LicenseAlreadyExistsException ex) {
+
+        return ResponseEntity
+                .badRequest()
+                .body(ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception ex) {
 
