@@ -60,12 +60,26 @@ public class OpenRouteServiceImpl implements OpenRouteService {
                 .body(String.class);
 
         try {
-            JsonNode root = objectMapper.readTree(response);
 
-            JsonNode summary = root
-                    .path("routes")
-                    .get(0)
-                    .path("summary");
+            JsonNode root =
+                    objectMapper.readTree(response);
+
+            JsonNode routes =
+                    root.path("routes");
+
+            if (!routes.isArray()
+                    || routes.isEmpty()) {
+
+                throw new RuntimeException(
+                        "No route found"
+                );
+            }
+
+            JsonNode route =
+                    routes.get(0);
+
+            JsonNode summary =
+                    route.path("summary");
 
             double distanceMeters =
                     summary.path("distance").asDouble();
@@ -73,15 +87,35 @@ public class OpenRouteServiceImpl implements OpenRouteService {
             double durationSeconds =
                     summary.path("duration").asDouble();
 
-            double distanceKm = distanceMeters / 1000.0;
-            double durationMinutes = durationSeconds / 60.0;
+            double distanceKm =
+                    distanceMeters / 1000.0;
+
+            double durationMinutes =
+                    durationSeconds / 60.0;
+
+            /*
+             * OpenRouteService returns the route geometry
+             * as an encoded polyline string.
+             */
+            String geometry =
+                    route.path("geometry").asText();
+
+            if (geometry == null
+                    || geometry.isBlank()) {
+
+                throw new RuntimeException(
+                        "Route geometry not returned"
+                );
+            }
 
             return new RouteResult(
                     distanceKm,
-                    durationMinutes
+                    durationMinutes,
+                    geometry
             );
 
         } catch (Exception e) {
+
             throw new RuntimeException(
                     "Failed to parse OpenRouteService response",
                     e

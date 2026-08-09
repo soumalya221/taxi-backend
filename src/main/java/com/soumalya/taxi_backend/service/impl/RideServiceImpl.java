@@ -23,17 +23,21 @@ import java.util.stream.Collectors;
 @Service
 public class RideServiceImpl implements RideService {
 
+    private static final double BASE_FARE = 50.0;
+    private static final double PER_KM_FARE = 15.0;
+
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
     private final OpenRouteService openRouteService;
 
-    public RideServiceImpl(RideRepository rideRepository,
-                           UserRepository userRepository,
-                           DriverRepository driverRepository,
-                           VehicleRepository vehicleRepository,
-                           OpenRouteService openRouteService) {
+    public RideServiceImpl(
+            RideRepository rideRepository,
+            UserRepository userRepository,
+            DriverRepository driverRepository,
+            VehicleRepository vehicleRepository,
+            OpenRouteService openRouteService) {
 
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
@@ -42,33 +46,51 @@ public class RideServiceImpl implements RideService {
         this.openRouteService = openRouteService;
     }
 
+    // ======================================================
+    // BOOK RIDE
+    // ======================================================
+
     @Override
-    public RideResponse bookRide(String email,
-                                 BookRideRequest request) {
+    public RideResponse bookRide(
+            String email,
+            BookRideRequest request) {
 
         User customer = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
 
         Ride ride = new Ride();
 
         ride.setCustomer(customer);
 
-        ride.setPickupLocation(request.getPickupLocation());
-        ride.setDropLocation(request.getDropLocation());
+        ride.setPickupLocation(
+                request.getPickupLocation()
+        );
 
-        ride.setPickupLatitude(request.getPickupLatitude());
-        ride.setPickupLongitude(request.getPickupLongitude());
+        ride.setDropLocation(
+                request.getDropLocation()
+        );
 
-        ride.setDropLatitude(request.getDropLatitude());
-        ride.setDropLongitude(request.getDropLongitude());
+        ride.setPickupLatitude(
+                request.getPickupLatitude()
+        );
 
-        /*
-         * Calculate actual road distance using OpenRouteService.
-         *
-         * OpenRouteService returns:
-         * distance in kilometers
-         * duration in minutes
-         */
+        ride.setPickupLongitude(
+                request.getPickupLongitude()
+        );
+
+        ride.setDropLatitude(
+                request.getDropLatitude()
+        );
+
+        ride.setDropLongitude(
+                request.getDropLongitude()
+        );
+
+        // ==================================================
+        // OPENROUTESERVICE ROAD ROUTE
+        // ==================================================
+
         OpenRouteService.RouteResult route =
                 openRouteService.getRoute(
                         request.getPickupLatitude(),
@@ -77,190 +99,310 @@ public class RideServiceImpl implements RideService {
                         request.getDropLongitude()
                 );
 
-        ride.setDistance(
-                Math.round(route.distanceKm() * 100.0) / 100.0
-        );
+        double distanceKm =
+                roundTwoDecimals(
+                        route.distanceKm()
+                );
+
+        double durationMinutes =
+                roundTwoDecimals(
+                        route.durationMinutes()
+                );
+
+        ride.setDistance(distanceKm);
 
         ride.setDurationMinutes(
-                Math.round(route.durationMinutes() * 100.0) / 100.0
+                durationMinutes
         );
 
-        /*
-         * Fare is calculated when the ride is completed.
-         */
-        ride.setFare(0.0);
+        // ==================================================
+        // ESTIMATED FARE
+        // ==================================================
 
-        ride.setStatus(RideStatus.REQUESTED);
+        double estimatedFare =
+                calculateFare(distanceKm);
 
-        Ride savedRide = rideRepository.save(ride);
+        ride.setFare(estimatedFare);
+
+        ride.setStatus(
+                RideStatus.REQUESTED
+        );
+
+        Ride savedRide =
+                rideRepository.save(ride);
 
         return mapToResponse(savedRide);
     }
+
+    // ======================================================
+    // ACCEPT RIDE
+    // ======================================================
 
     @Override
     public RideResponse acceptRide(Long rideId) {
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Ride not found"));
 
         if (ride.getStatus() != RideStatus.REQUESTED) {
+
             throw new RuntimeException(
                     "Ride is not available for acceptance"
             );
         }
 
         List<Driver> drivers =
-                driverRepository.findByStatus(DriverStatus.OFFLINE);
+                driverRepository.findByStatus(
+                        DriverStatus.OFFLINE
+                );
 
         if (drivers.isEmpty()) {
-            throw new RuntimeException("No available drivers");
+
+            throw new RuntimeException(
+                    "No available drivers"
+            );
         }
 
-        /*
-         * Find the nearest driver using the driver's
-         * current GPS location.
-         */
+        // ==================================================
+        // FIND NEAREST DRIVER
+        // ==================================================
+
         Driver nearestDriver = null;
-        double shortestDistance = Double.MAX_VALUE;
+
+        double shortestDistance =
+                Double.MAX_VALUE;
 
         for (Driver driver : drivers) {
 
             if (driver.getCurrentLatitude() == null
                     || driver.getCurrentLongitude() == null) {
+
                 continue;
             }
 
-            double distance = DistanceCalculator.calculateDistance(
-                    ride.getPickupLatitude(),
-                    ride.getPickupLongitude(),
-                    driver.getCurrentLatitude(),
-                    driver.getCurrentLongitude()
-            );
+            double distance =
+                    DistanceCalculator.calculateDistance(
+                            ride.getPickupLatitude(),
+                            ride.getPickupLongitude(),
+                            driver.getCurrentLatitude(),
+                            driver.getCurrentLongitude()
+                    );
 
             if (distance < shortestDistance) {
+
                 shortestDistance = distance;
                 nearestDriver = driver;
             }
         }
 
         if (nearestDriver == null) {
+
             throw new RuntimeException(
                     "No driver has shared location"
             );
         }
 
-        Vehicle vehicle = vehicleRepository
-                .findByDriver(nearestDriver)
-                .orElseThrow(() ->
-                        new RuntimeException("Vehicle not found"));
+        // ==================================================
+        // FIND DRIVER VEHICLE
+        // ==================================================
+
+        Vehicle vehicle =
+                vehicleRepository
+                        .findByDriver(nearestDriver)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Vehicle not found"
+                                )
+                        );
 
         ride.setDriver(nearestDriver);
         ride.setVehicle(vehicle);
         ride.setStatus(RideStatus.ACCEPTED);
 
-        nearestDriver.setStatus(DriverStatus.ON_RIDE);
+        nearestDriver.setStatus(
+                DriverStatus.ON_RIDE
+        );
 
         driverRepository.save(nearestDriver);
 
-        Ride updatedRide = rideRepository.save(ride);
+        Ride updatedRide =
+                rideRepository.save(ride);
 
         return mapToResponse(updatedRide);
     }
+
+    // ======================================================
+    // START RIDE
+    // ======================================================
 
     @Override
     public RideResponse startRide(Long rideId) {
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Ride not found"));
 
         if (ride.getStatus() != RideStatus.ACCEPTED) {
-            throw new RuntimeException("Ride is not accepted");
+
+            throw new RuntimeException(
+                    "Ride is not accepted"
+            );
         }
 
-        ride.setStatus(RideStatus.STARTED);
+        ride.setStatus(
+                RideStatus.STARTED
+        );
 
-        Ride updatedRide = rideRepository.save(ride);
+        Ride updatedRide =
+                rideRepository.save(ride);
 
         return mapToResponse(updatedRide);
     }
+
+    // ======================================================
+    // COMPLETE RIDE
+    // ======================================================
 
     @Override
     public RideResponse completeRide(Long rideId) {
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Ride not found"));
 
         if (ride.getStatus() != RideStatus.STARTED) {
-            throw new RuntimeException("Ride has not started");
+
+            throw new RuntimeException(
+                    "Ride has not started"
+            );
         }
 
-        Driver driver = ride.getDriver();
+        Driver driver =
+                ride.getDriver();
 
-        /*
-         * Fare calculation:
-         *
-         * Base fare = ₹50
-         * Per kilometer = ₹15
-         */
-        double baseFare = 50.0;
-        double perKmFare = 15.0;
+        // ==================================================
+        // FINAL FARE
+        // ==================================================
 
-        double fare =
-                baseFare + (ride.getDistance() * perKmFare);
+        double finalFare =
+                calculateFare(
+                        ride.getDistance()
+                );
 
-        ride.setFare(
-                Math.round(fare * 100.0) / 100.0
+        ride.setFare(finalFare);
+
+        ride.setStatus(
+                RideStatus.COMPLETED
         );
 
-        ride.setStatus(RideStatus.COMPLETED);
-
-        /*
-         * Driver becomes available again after
-         * completing the ride.
-         */
-        driver.setStatus(DriverStatus.OFFLINE);
+        // Driver becomes available again
+        driver.setStatus(
+                DriverStatus.OFFLINE
+        );
 
         driverRepository.save(driver);
 
-        Ride updatedRide = rideRepository.save(ride);
+        Ride updatedRide =
+                rideRepository.save(ride);
 
         return mapToResponse(updatedRide);
     }
 
+    // ======================================================
+    // CUSTOMER HISTORY
+    // ======================================================
+
     @Override
-    public List<RideResponse> getCustomerHistory(String email) {
+    public List<RideResponse> getCustomerHistory(
+            String email) {
 
-        User customer = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User customer =
+                userRepository.findByEmail(email)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "User not found"
+                                )
+                        );
 
-        return rideRepository.findByCustomer(customer)
+        return rideRepository
+                .findByCustomer(customer)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    // ======================================================
+    // DRIVER HISTORY
+    // ======================================================
+
     @Override
-    public List<RideResponse> getDriverHistory(String email) {
+    public List<RideResponse> getDriverHistory(
+            String email) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user =
+                userRepository.findByEmail(email)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "User not found"
+                                )
+                        );
 
-        Driver driver = driverRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+        Driver driver =
+                driverRepository.findByUser(user)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Driver not found"
+                                )
+                        );
 
-        return rideRepository.findByDriver(driver)
+        return rideRepository
+                .findByDriver(driver)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
-    private RideResponse mapToResponse(Ride ride) {
+    // ======================================================
+    // FARE CALCULATION
+    // ======================================================
+
+    private double calculateFare(
+            double distanceKm) {
+
+        double fare =
+                BASE_FARE +
+                (distanceKm * PER_KM_FARE);
+
+        return roundTwoDecimals(fare);
+    }
+
+    // ======================================================
+    // ROUND TO 2 DECIMAL PLACES
+    // ======================================================
+
+    private double roundTwoDecimals(
+            double value) {
+
+        return Math.round(
+                value * 100.0
+        ) / 100.0;
+    }
+
+    // ======================================================
+    // RESPONSE MAPPER
+    // ======================================================
+
+    private RideResponse mapToResponse(
+            Ride ride) {
 
         return RideResponse.builder()
+
                 .id(ride.getId())
 
                 .customer(
-                        ride.getCustomer().getEmail()
+                        ride.getCustomer()
+                                .getEmail()
                 )
 
                 .driver(

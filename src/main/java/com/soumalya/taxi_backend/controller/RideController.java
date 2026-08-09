@@ -2,6 +2,7 @@ package com.soumalya.taxi_backend.controller;
 
 import com.soumalya.taxi_backend.dto.request.BookRideRequest;
 import com.soumalya.taxi_backend.dto.response.RideResponse;
+import com.soumalya.taxi_backend.service.OpenRouteService;
 import com.soumalya.taxi_backend.service.RideService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
@@ -14,9 +15,14 @@ import java.util.List;
 public class RideController {
 
     private final RideService rideService;
+    private final OpenRouteService openRouteService;
 
-    public RideController(RideService rideService) {
+    public RideController(
+            RideService rideService,
+            OpenRouteService openRouteService) {
+
         this.rideService = rideService;
+        this.openRouteService = openRouteService;
     }
 
     @PostMapping("/book")
@@ -26,23 +32,27 @@ public class RideController {
 
         return rideService.bookRide(
                 authentication.getName(),
-                request);
+                request
+        );
     }
 
     @PatchMapping("/{rideId}/accept")
-    public RideResponse acceptRide(@PathVariable Long rideId) {
+    public RideResponse acceptRide(
+            @PathVariable Long rideId) {
 
         return rideService.acceptRide(rideId);
     }
 
     @PatchMapping("/{rideId}/start")
-    public RideResponse startRide(@PathVariable Long rideId) {
+    public RideResponse startRide(
+            @PathVariable Long rideId) {
 
         return rideService.startRide(rideId);
     }
 
     @PatchMapping("/{rideId}/complete")
-    public RideResponse completeRide(@PathVariable Long rideId) {
+    public RideResponse completeRide(
+            @PathVariable Long rideId) {
 
         return rideService.completeRide(rideId);
     }
@@ -52,7 +62,8 @@ public class RideController {
             Authentication authentication) {
 
         return rideService.getCustomerHistory(
-                authentication.getName());
+                authentication.getName()
+        );
     }
 
     @GetMapping("/my-rides")
@@ -60,6 +71,40 @@ public class RideController {
             Authentication authentication) {
 
         return rideService.getDriverHistory(
-                authentication.getName());
+                authentication.getName()
+        );
+    }
+
+    // ==========================================
+    // ROUTE API
+    // ==========================================
+
+    @GetMapping("/route")
+    public RouteResponse getRoute(
+            @RequestParam double pickupLatitude,
+            @RequestParam double pickupLongitude,
+            @RequestParam double dropLatitude,
+            @RequestParam double dropLongitude) {
+
+        OpenRouteService.RouteResult result =
+                openRouteService.getRoute(
+                        pickupLatitude,
+                        pickupLongitude,
+                        dropLatitude,
+                        dropLongitude
+                );
+
+        return new RouteResponse(
+                result.distanceKm(),
+                result.durationMinutes(),
+                result.geometry()
+        );
+    }
+
+    public record RouteResponse(
+            double distanceKm,
+            double durationMinutes,
+            String geometry
+    ) {
     }
 }

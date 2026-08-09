@@ -11,7 +11,8 @@ public interface OpenRouteService {
 
     record RouteResult(
             double distanceKm,
-            double durationMinutes
+            double durationMinutes,
+            String geometry
     ) {
     }
 }
