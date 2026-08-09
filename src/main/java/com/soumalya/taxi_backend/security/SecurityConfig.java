@@ -41,30 +41,49 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Authentication APIs
+                        // =========================
+                        // PUBLIC AUTHENTICATION APIs
+                        // =========================
                         .requestMatchers("/api/auth/**")
                         .permitAll()
 
-                        // Location / Geocoding APIs
+                        // =========================
+                        // PUBLIC USER REGISTRATION
+                        // =========================
+                        .requestMatchers("/api/users/register")
+                        .permitAll()
+
+                        // =========================
+                        // PUBLIC LOCATION APIs
+                        // =========================
                         .requestMatchers("/api/location/**")
                         .permitAll()
 
-                        // Public route preview API
+                        // =========================
+                        // PUBLIC ROUTE PREVIEW
+                        // =========================
                         .requestMatchers("/api/rides/route")
                         .permitAll()
 
-                        // Swagger
+                        // =========================
+                        // SWAGGER
+                        // =========================
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         )
                         .permitAll()
 
-                        // Admin APIs
+                        // =========================
+                        // ADMIN APIs
+                        // =========================
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
 
-                        // Everything else requires JWT
+                        // =========================
+                        // EVERYTHING ELSE
+                        // REQUIRES JWT
+                        // =========================
                         .anyRequest()
                         .authenticated()
                 )
