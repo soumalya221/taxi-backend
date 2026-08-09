@@ -4,8 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.soumalya.taxi_backend.config.OpenRouteServiceConfig;
 import com.soumalya.taxi_backend.service.LocationService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class LocationServiceImpl implements LocationService {
@@ -17,79 +23,97 @@ public class LocationServiceImpl implements LocationService {
     public LocationServiceImpl(OpenRouteServiceConfig config) {
 
         this.config = config;
-
         this.restClient = RestClient.builder()
                 .baseUrl(config.getGeocodeUrl())
                 .build();
-
         this.objectMapper = new ObjectMapper();
     }
 
     @Override
-    public LocationResult searchLocation(String query) {
+    public List<LocationResult> searchLocation(String query) {
+
+        if (query == null || query.isBlank()) {
+
+            return List.of();
+        }
 
         try {
 
             String response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/search")
-                            .queryParam("api_key", config.getApiKey())
-                            .queryParam("text", query)
-                            .queryParam("size", 1)
+                            .path("/autocomplete")
+                            .queryParam("text", query.trim())
+                            .queryParam("size", 5)
                             .build())
+                    .header("Authorization", config.getApiKey())
                     .retrieve()
                     .body(String.class);
 
-            JsonNode root =
-                    objectMapper.readTree(response);
+            JsonNode features = objectMapper
+                    .readTree(response)
+                    .path("features");
 
-            JsonNode features =
-                    root.path("features");
+            if (!features.isArray() || features.isEmpty()) {
 
-            if (!features.isArray()
-                    || features.isEmpty()) {
+                return List.of();
+            }
 
-                throw new RuntimeException(
-                        "Location not found: " + query
+            List<LocationResult> locations = new ArrayList<>();
+
+            for (JsonNode feature : features) {
+
+                JsonNode properties = feature.path("properties");
+                JsonNode coordinates = feature.path("geometry")
+                        .path("coordinates");
+
+                if (!coordinates.isArray() || coordinates.size() < 2) {
+
+                    continue;
+                }
+
+                String name = properties.path("name").asText();
+                String address = properties.path("label").asText();
+
+                if (name.isBlank()) {
+
+                    name = address;
+                }
+
+                if (name.isBlank() || address.isBlank()) {
+
+                    continue;
+                }
+
+                locations.add(new LocationResult(
+                        name,
+                        address,
+                        coordinates.get(1).asDouble(),
+                        coordinates.get(0).asDouble()
+                ));
+            }
+
+            return locations;
+
+        } catch (RestClientResponseException e) {
+
+            if (e.getStatusCode().value() == 429) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "Location search is temporarily rate limited"
                 );
             }
 
-            JsonNode feature =
-                    features.get(0);
-
-            String name =
-                    feature.path("properties")
-                            .path("label")
-                            .asText(query);
-
-            JsonNode coordinates =
-                    feature.path("geometry")
-                            .path("coordinates");
-
-            if (!coordinates.isArray()
-                    || coordinates.size() < 2) {
-
-                throw new RuntimeException(
-                        "Invalid coordinates returned for: " + query
-                );
-            }
-
-            double longitude =
-                    coordinates.get(0).asDouble();
-
-            double latitude =
-                    coordinates.get(1).asDouble();
-
-            return new LocationResult(
-                    name,
-                    latitude,
-                    longitude
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Location search service is unavailable"
             );
 
         } catch (Exception e) {
 
-            throw new RuntimeException(
-                    "Unable to search location: " + query,
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Location search service is unavailable",
                     e
             );
         }

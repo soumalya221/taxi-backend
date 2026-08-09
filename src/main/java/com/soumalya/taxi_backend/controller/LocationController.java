@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/location")
 @CrossOrigin(origins = "*")
@@ -19,7 +21,7 @@ public class LocationController {
     }
 
     @GetMapping("/search")
-    public LocationService.LocationResult search(
+    public List<LocationService.LocationResult> search(
             @RequestParam String q) {
 
         return locationService.searchLocation(q);

@@ -8,6 +8,7 @@ import com.soumalya.taxi_backend.entity.User;
 import com.soumalya.taxi_backend.entity.Vehicle;
 import com.soumalya.taxi_backend.enums.DriverStatus;
 import com.soumalya.taxi_backend.enums.RideStatus;
+import com.soumalya.taxi_backend.enums.VehicleType;
 import com.soumalya.taxi_backend.repository.DriverRepository;
 import com.soumalya.taxi_backend.repository.RideRepository;
 import com.soumalya.taxi_backend.repository.UserRepository;
@@ -17,14 +18,16 @@ import com.soumalya.taxi_backend.service.RideService;
 import com.soumalya.taxi_backend.util.DistanceCalculator;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class RideServiceImpl implements RideService {
 
-    private static final double BASE_FARE = 50.0;
-    private static final double PER_KM_FARE = 15.0;
+    private static final BigDecimal BASE_FARE =
+            BigDecimal.valueOf(50);
 
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
@@ -87,6 +90,10 @@ public class RideServiceImpl implements RideService {
                 request.getDropLongitude()
         );
 
+        ride.setVehicleType(
+                request.getVehicleType()
+        );
+
         // ==================================================
         // OPENROUTESERVICE ROAD ROUTE
         // ==================================================
@@ -120,7 +127,10 @@ public class RideServiceImpl implements RideService {
         // ==================================================
 
         double estimatedFare =
-                calculateFare(distanceKm);
+                calculateFare(
+                        distanceKm,
+                        request.getVehicleType()
+                );
 
         ride.setFare(estimatedFare);
 
@@ -154,7 +164,7 @@ public class RideServiceImpl implements RideService {
 
         List<Driver> drivers =
                 driverRepository.findByStatus(
-                        DriverStatus.OFFLINE
+                        DriverStatus.ONLINE
                 );
 
         if (drivers.isEmpty()) {
@@ -209,7 +219,10 @@ public class RideServiceImpl implements RideService {
 
         Vehicle vehicle =
                 vehicleRepository
-                        .findByDriver(nearestDriver)
+                        .findByDriverAndVehicleType(
+                                nearestDriver,
+                                ride.getVehicleType()
+                        )
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Vehicle not found"
@@ -287,7 +300,8 @@ public class RideServiceImpl implements RideService {
 
         double finalFare =
                 calculateFare(
-                        ride.getDistance()
+                        ride.getDistance(),
+                        ride.getVehicleType()
                 );
 
         ride.setFare(finalFare);
@@ -368,13 +382,26 @@ public class RideServiceImpl implements RideService {
     // ======================================================
 
     private double calculateFare(
-            double distanceKm) {
+            double distanceKm,
+            VehicleType vehicleType) {
 
-        double fare =
-                BASE_FARE +
-                (distanceKm * PER_KM_FARE);
+        BigDecimal perKmRate = switch (vehicleType) {
+            case HATCHBACK -> BigDecimal.valueOf(12);
+            case SEDAN -> BigDecimal.valueOf(15);
+            case SUV -> BigDecimal.valueOf(20);
+            default -> throw new IllegalArgumentException(
+                    "Unsupported vehicle type for booking: " +
+                            vehicleType
+            );
+        };
 
-        return roundTwoDecimals(fare);
+        return BASE_FARE
+                .add(
+                        BigDecimal.valueOf(distanceKm)
+                                .multiply(perKmRate)
+                )
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     // ======================================================
@@ -423,11 +450,24 @@ public class RideServiceImpl implements RideService {
                                         .getEmail()
                 )
 
+                .driverId(
+                        ride.getDriver() == null
+                                ? null
+                                : ride.getDriver()
+                                        .getId()
+                )
+
                 .vehicle(
                         ride.getVehicle() == null
                                 ? null
                                 : ride.getVehicle()
                                         .getVehicleNumber()
+                )
+
+                .vehicleType(
+                        ride.getVehicleType() == null
+                                ? null
+                                : ride.getVehicleType().name()
                 )
 
                 .pickupLocation(

@@ -6,9 +6,17 @@ import com.soumalya.taxi_backend.dto.response.DriverResponse;
 
 public interface DriverService {
 
-    DriverResponse registerDriver(String email,
-                                  DriverRegisterRequest request);
+    DriverResponse registerDriver(
+            String email,
+            DriverRegisterRequest request
+    );
 
-    DriverResponse updateLocation(String email,
-                                  DriverLocationRequest request);
+    DriverResponse updateLocation(
+            String email,
+            DriverLocationRequest request
+    );
+
+    DriverResponse getDriverLocation(
+            Long driverId
+    );
 }

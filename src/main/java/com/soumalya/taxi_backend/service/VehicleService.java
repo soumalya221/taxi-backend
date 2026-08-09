@@ -10,4 +10,7 @@ public interface VehicleService {
             VehicleRegisterRequest request
     );
 
+    VehicleResponse getMyVehicle(
+            String email
+    );
 }

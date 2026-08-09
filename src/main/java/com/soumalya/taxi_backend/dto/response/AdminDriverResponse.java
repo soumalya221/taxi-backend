@@ -1,19 +1,19 @@
 package com.soumalya.taxi_backend.dto.response;
 
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 @Builder
-public class DriverResponse {
+public class AdminDriverResponse {
 
     private Long id;
 
     private String name;
 
     private String email;
+
+    private String phone;
 
     private String licenseNumber;
 
@@ -23,7 +23,7 @@ public class DriverResponse {
 
     private String status;
 
-    private Double latitude;
+    private Double currentLatitude;
 
-    private Double longitude;
+    private Double currentLongitude;
 }

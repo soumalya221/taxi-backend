@@ -19,71 +19,155 @@ public class DriverServiceImpl implements DriverService {
     private final DriverRepository driverRepository;
     private final UserRepository userRepository;
 
-    public DriverServiceImpl(DriverRepository driverRepository,
-                             UserRepository userRepository) {
+    public DriverServiceImpl(
+            DriverRepository driverRepository,
+            UserRepository userRepository) {
+
         this.driverRepository = driverRepository;
         this.userRepository = userRepository;
     }
 
-    @Override
-    public DriverResponse registerDriver(String email,
-                                         DriverRegisterRequest request) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    // ==================================================
+    // REGISTER DRIVER
+    // ==================================================
+
+    @Override
+    public DriverResponse registerDriver(
+            String email,
+            DriverRegisterRequest request) {
+
+        User user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found"));
 
         if (driverRepository.existsByUser(user)) {
-            throw new DriverAlreadyExistsException("Driver profile already exists");
+
+            throw new DriverAlreadyExistsException(
+                    "Driver profile already exists");
         }
 
-        if (driverRepository.existsByLicenseNumber(request.getLicenseNumber())) {
-            throw new LicenseAlreadyExistsException("License number already exists");
+        if (driverRepository.existsByLicenseNumber(
+                request.getLicenseNumber())) {
+
+            throw new LicenseAlreadyExistsException(
+                    "License number already exists");
         }
 
         Driver driver = new Driver();
 
         driver.setUser(user);
-        driver.setLicenseNumber(request.getLicenseNumber());
-        driver.setExperience(request.getExperience());
-        driver.setRating(5.0);
-        driver.setStatus(DriverStatus.OFFLINE);
 
-        Driver savedDriver = driverRepository.save(driver);
+        driver.setLicenseNumber(
+                request.getLicenseNumber());
+
+        driver.setExperience(
+                request.getExperience());
+
+        driver.setRating(5.0);
+
+        driver.setStatus(
+                DriverStatus.OFFLINE);
+
+        Driver savedDriver =
+                driverRepository.save(driver);
 
         return DriverResponse.builder()
                 .id(savedDriver.getId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .licenseNumber(savedDriver.getLicenseNumber())
-                .experience(savedDriver.getExperience())
-                .rating(savedDriver.getRating())
-                .status(savedDriver.getStatus().name())
+                .licenseNumber(
+                        savedDriver.getLicenseNumber())
+                .experience(
+                        savedDriver.getExperience())
+                .rating(
+                        savedDriver.getRating())
+                .status(
+                        savedDriver.getStatus().name())
                 .build();
     }
 
+
+    // ==================================================
+    // UPDATE DRIVER LOCATION
+    // ==================================================
+
     @Override
-    public DriverResponse updateLocation(String email,
-                                         DriverLocationRequest request) {
+    public DriverResponse updateLocation(
+            String email,
+            DriverLocationRequest request) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found"));
 
-        Driver driver = driverRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Driver profile not found"));
+        Driver driver = driverRepository
+                .findByUser(user)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Driver profile not found"));
 
-        driver.setCurrentLatitude(request.getLatitude());
-        driver.setCurrentLongitude(request.getLongitude());
+        driver.setCurrentLatitude(
+                request.getLatitude());
 
-        Driver updatedDriver = driverRepository.save(driver);
+        driver.setCurrentLongitude(
+                request.getLongitude());
+
+        Driver updatedDriver =
+                driverRepository.save(driver);
 
         return DriverResponse.builder()
                 .id(updatedDriver.getId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .licenseNumber(updatedDriver.getLicenseNumber())
-                .experience(updatedDriver.getExperience())
-                .rating(updatedDriver.getRating())
-                .status(updatedDriver.getStatus().name())
+                .licenseNumber(
+                        updatedDriver.getLicenseNumber())
+                .experience(
+                        updatedDriver.getExperience())
+                .rating(
+                        updatedDriver.getRating())
+                .status(
+                        updatedDriver.getStatus().name())
+                .build();
+    }
+
+
+    // ==================================================
+    // GET DRIVER LOCATION
+    // ==================================================
+
+    @Override
+    public DriverResponse getDriverLocation(
+            Long driverId) {
+
+        Driver driver =
+                driverRepository.findById(driverId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Driver not found"));
+
+        User user = driver.getUser();
+
+        return DriverResponse.builder()
+                .id(driver.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .licenseNumber(
+                        driver.getLicenseNumber())
+                .experience(
+                        driver.getExperience())
+                .rating(
+                        driver.getRating())
+                .status(
+                        driver.getStatus().name())
+                .latitude(
+                        driver.getCurrentLatitude())
+                .longitude(
+                        driver.getCurrentLongitude())
                 .build();
     }
 }

@@ -2,6 +2,7 @@ package com.soumalya.taxi_backend.entity;
 
 import com.soumalya.taxi_backend.entity.base.BaseEntity;
 import com.soumalya.taxi_backend.enums.RideStatus;
+import com.soumalya.taxi_backend.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,6 +47,9 @@ public class Ride extends BaseEntity {
     private Double durationMinutes;
 
     private Double fare;
+
+    @Enumerated(EnumType.STRING)
+    private VehicleType vehicleType;
 
     @Enumerated(EnumType.STRING)
     private RideStatus status;

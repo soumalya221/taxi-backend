@@ -21,16 +21,21 @@ public class VehicleController {
 
     @PostMapping("/register")
     public VehicleResponse registerVehicle(
-
             Authentication authentication,
-
-            @Valid
-            @RequestBody VehicleRegisterRequest request) {
+            @Valid @RequestBody VehicleRegisterRequest request) {
 
         return vehicleService.registerVehicle(
-
                 authentication.getName(),
                 request
+        );
+    }
+
+    @GetMapping("/my-vehicle")
+    public VehicleResponse getMyVehicle(
+            Authentication authentication) {
+
+        return vehicleService.getMyVehicle(
+                authentication.getName()
         );
     }
 }

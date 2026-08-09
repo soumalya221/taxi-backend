@@ -36,13 +36,15 @@ public class VehicleServiceImpl implements VehicleService {
             VehicleRegisterRequest request) {
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
 
         Driver driver = driverRepository.findByUser(user)
                 .orElseThrow(() ->
                         new RuntimeException("Driver profile not found"));
 
         if (vehicleRepository.existsByDriver(driver)) {
+
             throw new VehicleAlreadyExistsException(
                     "Driver already has a vehicle");
         }
@@ -57,25 +59,86 @@ public class VehicleServiceImpl implements VehicleService {
         Vehicle vehicle = new Vehicle();
 
         vehicle.setDriver(driver);
-        vehicle.setVehicleNumber(request.getVehicleNumber());
-        vehicle.setVehicleType(request.getVehicleType());
-        vehicle.setBrand(request.getBrand());
-        vehicle.setModel(request.getModel());
-        vehicle.setColor(request.getColor());
-        vehicle.setSeatCapacity(request.getSeatCapacity());
-        vehicle.setStatus(VehicleStatus.AVAILABLE);
 
-        Vehicle savedVehicle = vehicleRepository.save(vehicle);
+        vehicle.setVehicleNumber(
+                request.getVehicleNumber());
+
+        vehicle.setVehicleType(
+                request.getVehicleType());
+
+        vehicle.setBrand(
+                request.getBrand());
+
+        vehicle.setModel(
+                request.getModel());
+
+        vehicle.setColor(
+                request.getColor());
+
+        vehicle.setSeatCapacity(
+                request.getSeatCapacity());
+
+        vehicle.setStatus(
+                VehicleStatus.AVAILABLE);
+
+        Vehicle savedVehicle =
+                vehicleRepository.save(vehicle);
 
         return VehicleResponse.builder()
                 .id(savedVehicle.getId())
-                .vehicleNumber(savedVehicle.getVehicleNumber())
-                .vehicleType(savedVehicle.getVehicleType().name())
-                .brand(savedVehicle.getBrand())
-                .model(savedVehicle.getModel())
-                .color(savedVehicle.getColor())
-                .seatCapacity(savedVehicle.getSeatCapacity())
-                .status(savedVehicle.getStatus().name())
+                .vehicleNumber(
+                        savedVehicle.getVehicleNumber())
+                .vehicleType(
+                        savedVehicle.getVehicleType().name())
+                .brand(
+                        savedVehicle.getBrand())
+                .model(
+                        savedVehicle.getModel())
+                .color(
+                        savedVehicle.getColor())
+                .seatCapacity(
+                        savedVehicle.getSeatCapacity())
+                .status(
+                        savedVehicle.getStatus().name())
+                .build();
+    }
+
+
+    @Override
+    public VehicleResponse getMyVehicle(
+            String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        Driver driver = driverRepository.findByUser(user)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Driver profile not found"));
+
+        Vehicle vehicle = vehicleRepository
+                .findByDriver(driver)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Vehicle not found"));
+
+        return VehicleResponse.builder()
+                .id(vehicle.getId())
+                .vehicleNumber(
+                        vehicle.getVehicleNumber())
+                .vehicleType(
+                        vehicle.getVehicleType().name())
+                .brand(
+                        vehicle.getBrand())
+                .model(
+                        vehicle.getModel())
+                .color(
+                        vehicle.getColor())
+                .seatCapacity(
+                        vehicle.getSeatCapacity())
+                .status(
+                        vehicle.getStatus().name())
                 .build();
     }
 }

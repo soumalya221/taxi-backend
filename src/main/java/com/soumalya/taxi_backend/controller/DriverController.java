@@ -14,7 +14,9 @@ public class DriverController {
 
     private final DriverService driverService;
 
-    public DriverController(DriverService driverService) {
+    public DriverController(
+            DriverService driverService) {
+
         this.driverService = driverService;
     }
 
@@ -29,6 +31,11 @@ public class DriverController {
         );
     }
 
+
+    // ==================================================
+    // UPDATE DRIVER LOCATION
+    // ==================================================
+
     @PatchMapping("/location")
     public DriverResponse updateLocation(
             Authentication authentication,
@@ -36,6 +43,21 @@ public class DriverController {
 
         return driverService.updateLocation(
                 authentication.getName(),
-                request);
+                request
+        );
+    }
+
+
+    // ==================================================
+    // GET DRIVER LOCATION
+    // ==================================================
+
+    @GetMapping("/{driverId}/location")
+    public DriverResponse getDriverLocation(
+            @PathVariable Long driverId) {
+
+        return driverService.getDriverLocation(
+                driverId
+        );
     }
 }

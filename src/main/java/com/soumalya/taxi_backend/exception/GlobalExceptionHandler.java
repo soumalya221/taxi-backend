@@ -6,6 +6,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -76,6 +77,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .badRequest()
                 .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatus(
+            ResponseStatusException ex) {
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", ex.getReason());
+
+        return new ResponseEntity<>(
+                response,
+                ex.getStatusCode()
+        );
     }
 
     @ExceptionHandler(VehicleAlreadyExistsException.class)

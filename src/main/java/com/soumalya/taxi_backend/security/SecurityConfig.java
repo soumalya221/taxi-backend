@@ -60,6 +60,10 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
+                        // Admin APIs
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
+
                         // Everything else requires JWT
                         .anyRequest()
                         .authenticated()

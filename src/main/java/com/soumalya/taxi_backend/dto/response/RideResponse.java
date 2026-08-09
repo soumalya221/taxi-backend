@@ -13,7 +13,11 @@ public class RideResponse {
 
     private String driver;
 
+    private Long driverId;
+
     private String vehicle;
+
+    private String vehicleType;
 
     private String pickupLocation;
 
