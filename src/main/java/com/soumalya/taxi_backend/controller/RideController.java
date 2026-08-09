@@ -75,6 +75,12 @@ public class RideController {
         );
     }
 
+    @GetMapping("/available")
+    public List<RideResponse> availableRides() {
+
+        return rideService.getAvailableRides();
+    }
+
     // ==========================================
     // ROUTE API
     // ==========================================

@@ -19,4 +19,6 @@ public interface RideService {
     List<RideResponse> getCustomerHistory(String email);
 
     List<RideResponse> getDriverHistory(String email);
+
+    List<RideResponse> getAvailableRides();
 }

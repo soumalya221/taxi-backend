@@ -393,6 +393,16 @@ public class RideServiceImpl implements RideService {
     // RESPONSE MAPPER
     // ======================================================
 
+    @Override
+    public List<RideResponse> getAvailableRides() {
+
+        return rideRepository
+                .findByStatus(RideStatus.REQUESTED)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     private RideResponse mapToResponse(
             Ride ride) {
 
